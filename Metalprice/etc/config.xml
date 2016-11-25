@@ -1,0 +1,123 @@
+<?xml version="1.0"?>
+
+<config>
+    <modules>
+        <Cybernetikz_Metalprice>
+            <version>1.0.0</version>
+        </Cybernetikz_Metalprice>
+    </modules>
+    <global>
+        <blocks>
+            <metalprice>
+                <class>Cybernetikz_Metalprice_Block</class>
+            </metalprice>
+        </blocks>
+        <models>
+            <metalprice>
+                <class>Cybernetikz_Metalprice_Model</class>
+            </metalprice>
+        </models>
+        <helpers>
+            <metalprice>
+                <class>Cybernetikz_Metalprice_Helper</class>
+            </metalprice>
+        </helpers>
+        <events>
+            <catalog_product_prepare_save>
+                <observers>
+                    <cybernetikz_metalprice_catalog_product_prepare_save_observer>
+                        <type>singleton</type>
+                        <class>metalprice/observer</class>
+                        <method>updatePriceNow</method>
+                    </cybernetikz_metalprice_catalog_product_prepare_save_observer>
+                </observers>
+            </catalog_product_prepare_save>
+            <!-- <catalog_product_load_after>
+                <observers>
+                    <cybernetikz_metalprice_catalog_product_load_after_observer>
+                        <type>singleton</type>
+                        <class>metalprice/observer</class>
+                        <method>updatePriceFrontend</method>
+                    </cybernetikz_metalprice_catalog_product_load_after_observer>
+                </observers>
+            </catalog_product_load_after> -->
+            <!-- <catalog_product_collection_load_after>
+                <observers>
+                    <cybernetikz_metalprice_catalog_product_collection_load_after_observer>
+                        <type>singleton</type>
+                        <class>metalprice/observer</class>
+                        <method>updatePriceOnListingFrontend</method>
+                    </cybernetikz_metalprice_catalog_product_collection_load_after_observer>
+                </observers>
+            </catalog_product_collection_load_after> -->
+        </events>
+        <resources>
+            <metalprice_setup>
+                <setup>
+                    <module>Cybernetikz_Metalprice</module>
+                    <!-- <class>Cybernetikz_Metalprice_Model_Resource_Eav_Mysql4_Setup</class> -->
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </metalprice_setup>
+            <metalprice_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </metalprice_write>
+            <metalprice_read>
+                <connection>
+                    <connection>
+                        <use>core_read</use>
+                    </connection>
+                </connection>
+            </metalprice_read>
+        </resources>
+    </global>
+    <frontend>
+        <routers>
+            <Cybernetikz_Metalprice>
+                <use>standard</use>
+                <args>
+                    <module>Cybernetikz_Metalprice</module>
+                    <frontName>mprice</frontName>
+                </args>
+            </Cybernetikz_Metalprice>
+        </routers>
+        
+        <!-- <layout>
+                   <updates>
+                       <metalprice>
+                           <file>ads.xml</file>
+                       </metalprice>
+                   </updates>
+               </layout> -->       
+    </frontend>
+    <adminhtml>
+        <layout>
+            <updates>
+                <metalprice>
+                    <file>metalprice.xml</file>
+                </metalprice>
+            </updates>
+        </layout>
+    </adminhtml>
+    <!-- <frontend>
+        <layout>
+            <updates>
+                <metalprice>
+                    <file>metalprice.xml</file>
+                </metalprice>
+            </updates>
+        </layout>
+    </frontend>
+    <default>
+        <metalprice>
+            <config>
+                <url>http://gold-feed.com/mag_gold.php</url>
+            </config>
+        </metalprice>
+    </default>-->
+    
+</config>
