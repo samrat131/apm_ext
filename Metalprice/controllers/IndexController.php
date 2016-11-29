@@ -16,23 +16,6 @@ class Cybernetikz_Metalprice_IndexController extends Mage_Core_Controller_Front_
 		}
 	}
 
-	protected function _getMetalPrice($precious_material)
-	{
-		/*$data = file_get_contents('https://gold-feed.com/mag_gold.php');
-		$xml = simplexml_load_string($data);
-		return $xml->gold->price;*/
-		if ($precious_material=='gold') {
-			$rand = mt_rand(2000,2000);
-		}
-		
-		if ($precious_material=='silver') {
-			$rand = mt_rand(24,24);
-		}
-
-		//$this->log($rand);
-		return $rand;
-	}
-
 	protected function _getAttributeIdByCode($attributeCode='')
 	{
 		if ($attributeCode=='') {
@@ -65,14 +48,13 @@ class Cybernetikz_Metalprice_IndexController extends Mage_Core_Controller_Front_
     				->addAttributeToSelect('total_price')
     				->addAttributeToSelect('precious_materials_total')
     				->addFieldToFilter('status',1)
-    				//->addFieldToFilter('not_for_sale',0)
+    				->addFieldToFilter('not_for_sale',0)
     				->addFieldToFilter('price',array('gteq'=>1))
     				//->getSelect()
     				->load();
 
     	foreach ($productCollections as $product) {
-    		//$this->pr($product->getData());
-    		//die();
+    		//$this->pr($product->getData()); continue;
     		//$_product = Mage::getModel('catalog/product')->load($product->getId());
 
 			// 	Array
@@ -85,7 +67,12 @@ class Cybernetikz_Metalprice_IndexController extends Mage_Core_Controller_Front_
 			//     [price] => 1500.5000
 			//     [percentage] => 8.0000
 			//     [website_price] => 1500.5000
-			// )    		
+			// )  
+			// UPDATE YourTable
+			// SET ColumnB=ColumnA
+			// WHERE
+			// ColumnB IS NULL 
+			// AND ColumnA IS NOT NULL  		
 
 
     		$precious_material = $product['precious_material'];
@@ -95,7 +82,8 @@ class Cybernetikz_Metalprice_IndexController extends Mage_Core_Controller_Front_
     		}
 
     		//get current precious metal market price
-    		$market_price = $this->_getMetalPrice($precious_material);
+    		$market_price = Mage::helper('metalprice')->getMetalPrice($precious_material);
+    		//echo $market_price; die();
 
     		//assign value from array to variable
     		$precious_materials_weight = $product['precious_materials_weight'];
@@ -167,7 +155,6 @@ class Cybernetikz_Metalprice_IndexController extends Mage_Core_Controller_Front_
     	$time_end = microtime(true);
 		$execution_time = ($time_end - $time_start); 
 		
-		echo '<br/><b>Total Execution Time:</b> '.$execution_time.' Sec. for <b>'.$i.'</b> products.';
-
+		//echo '<br/><b>Total Execution Time:</b> '.$execution_time.' Sec. for <b>'.$i.'</b> products.';
     }
 }

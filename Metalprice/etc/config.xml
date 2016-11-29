@@ -55,7 +55,6 @@
             <metalprice_setup>
                 <setup>
                     <module>Cybernetikz_Metalprice</module>
-                    <!-- <class>Cybernetikz_Metalprice_Model_Resource_Eav_Mysql4_Setup</class> -->
                 </setup>
                 <connection>
                     <use>core_setup</use>
@@ -75,6 +74,7 @@
             </metalprice_read>
         </resources>
     </global>
+
     <frontend>
         <routers>
             <Cybernetikz_Metalprice>
@@ -85,15 +85,8 @@
                 </args>
             </Cybernetikz_Metalprice>
         </routers>
-        
-        <!-- <layout>
-                   <updates>
-                       <metalprice>
-                           <file>ads.xml</file>
-                       </metalprice>
-                   </updates>
-               </layout> -->       
     </frontend>
+
     <adminhtml>
         <layout>
             <updates>
@@ -103,21 +96,17 @@
             </updates>
         </layout>
     </adminhtml>
-    <!-- <frontend>
-        <layout>
-            <updates>
-                <metalprice>
-                    <file>metalprice.xml</file>
-                </metalprice>
-            </updates>
-        </layout>
-    </frontend>
-    <default>
-        <metalprice>
-            <config>
-                <url>http://gold-feed.com/mag_gold.php</url>
-            </config>
-        </metalprice>
-    </default>-->
-    
+
+    <crontab>
+        <jobs>
+            <update_price_cron>
+                <schedule>
+                    <cron_expr>* * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>metalprice/observer::updatePriceCron</model>
+                </run>
+            </update_price_cron>           
+        </jobs>
+    </crontab>
 </config>

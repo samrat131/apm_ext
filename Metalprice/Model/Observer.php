@@ -7,24 +7,11 @@ class Cybernetikz_Metalprice_Model_Observer
 {
 
 	static protected $_singletonFlag = false;
-	//protected $_marketPrice;
 
-	protected function _getMetalPrice($precious_material)
-	{
-		/*$data = file_get_contents('https://gold-feed.com/mag_gold.php');
-		$xml = simplexml_load_string($data);
-		return $xml->gold->price;*/
-		if ($precious_material=='gold') {
-			$rand = mt_rand(1000,1000);
-		}
-		
-		if ($precious_material=='silver') {
-			$rand = mt_rand(10,10);
-		}
-
-		$this->log($rand);
-		return $rand;
-	}
+	protected function _getRequest()
+    {
+        return Mage::app()->getRequest();
+    }	
 
 	protected function _getAttributeIdByCode($attributeCode='')
 	{
@@ -65,7 +52,7 @@ class Cybernetikz_Metalprice_Model_Observer
 				$base_sell_price = $postdata['product']['base_sell_price'];
 				$precious_material = $postdata['product']['precious_material'];
 
-				$market_price = $this->_getMetalPrice($precious_material);
+				$market_price = Mage::helper('metalprice')->getMetalPrice($precious_material);
 				
 				// need to update
 				$purity = $postdata['product']['purity'];
@@ -131,7 +118,7 @@ class Cybernetikz_Metalprice_Model_Observer
 			$product = $observer->getProduct();
 			$productId = $product->getId();
 
-			$market_price = $this->_getMetalPrice();
+			$market_price = Mage::helper('metalprice')->getMetalPrice();
 			
 			$base_sell_price = $product->getBaseSellPrice();
 			$purity = $product->getPurity();
@@ -245,7 +232,7 @@ class Cybernetikz_Metalprice_Model_Observer
 				$productId = $_product->getId();
 				$product = Mage::getModel('catalog/product')->load($productId);
 
-				$market_price = $this->_getMetalPrice();
+				$market_price = Mage::helper('metalprice')->getMetalPrice();
 
 				$base_sell_price = $product->getBaseSellPrice();
 				$purity = $product->getPurity();
@@ -301,11 +288,127 @@ class Cybernetikz_Metalprice_Model_Observer
 
 			return $this;
 		}
-		
 	}
 
-	protected function _getRequest()
-    {
-        return Mage::app()->getRequest();
+    public function updatePriceCron() { 
+
+		$i = 0;
+		$j = 0;
+		$time_start = microtime(true);
+    	$reindexPrice = true;
+    	$_debugLog = false;
+    	$allow_metarial = array('gold','silver');
+		$write = Mage::getSingleton('core/resource')->getConnection('core_write');
+
+    	/*$productCollections = Mage::getModel('catalog/product')
+    				->getCollection()
+    				->load();*/
+
+    	$productCollections = Mage::getResourceModel('catalog/product_collection')
+    				//->addAttributeToSelect('*')
+    				->addAttributeToSelect('base_sell_price')
+    				->addAttributeToSelect('precious_material')
+    				->addAttributeToSelect('market_price')
+    				->addAttributeToSelect('purity')
+    				->addAttributeToSelect('precious_materials_weight')
+    				->addAttributeToSelect('markup')
+    				->addAttributeToSelect('total_price')
+    				->addAttributeToSelect('precious_materials_total')
+    				->addFieldToFilter('status',1)
+    				//->addFieldToFilter('not_for_sale',0)
+    				->addFieldToFilter('price',array('gteq'=>1))
+    				//->getSelect()
+    				->load();
+
+    	foreach ($productCollections as $product) {
+    		//$this->pr($product->getData());
+    		//$_product = Mage::getModel('catalog/product')->load($product->getId());
+
+    		$precious_material = $product['precious_material'];
+    		//if metal is not gold or silver then skip
+    		if (!in_array($precious_material, $allow_metarial)) {
+    			continue;
+    		}
+
+    		//get current precious metal market price
+    		$market_price = Mage::helper('metalprice')->getMetalPrice($precious_material);
+    		//echo $market_price; die();
+
+    		//assign value from array to variable
+    		$precious_materials_weight = $product['precious_materials_weight'];
+    		$purity = $product['purity'];
+    		$markup = ($product['markup']==0 || $product['markup']=='') ? 1 : $product['markup'];
+    		$base_sell_price = $product['base_sell_price'];
+
+    		//calculate metal price 
+    		$precious_materials_total = $market_price * $purity * $precious_materials_weight * $markup;
+			$total_price = $precious_materials_total + $base_sell_price;
+
+			//get attr id from attr name
+			$price_attr_id = $this->_getAttributeIdByCode('price');
+			$precious_materials_total_attr_id = $this->_getAttributeIdByCode('precious_materials_total');
+			$total_price_attr_id = $this->_getAttributeIdByCode('total_price');
+			$market_price_attr_id = $this->_getAttributeIdByCode('market_price');
+
+			//set entity id
+			$entity_id = $product->getId();
+
+			//update price and total_price
+			$data = array("value" => $total_price);
+			$where = "entity_id = {$entity_id} AND attribute_id in ({$price_attr_id},{$total_price_attr_id})";
+			$write->update("catalog_product_entity_decimal", $data, $where);
+
+			//update precious_materials_total
+			$data = array("value" => $precious_materials_total);
+			$where = "entity_id = {$entity_id} AND attribute_id in ({$precious_materials_total_attr_id})";
+			$write->update("catalog_product_entity_decimal", $data, $where);
+
+			//update current metal market price
+			$data = array("value" => $market_price);
+			$where = "entity_id = {$entity_id} AND attribute_id in ({$market_price_attr_id})";
+			$write->update("catalog_product_entity_decimal", $data, $where);	
+    		
+    		$_tierPriceArray = $product->getTierPrice();
+    		if ( is_array($_tierPriceArray) && count($_tierPriceArray)>0 ) {
+    		
+    			//$this->pr($_tierPriceArray);
+    			foreach ($_tierPriceArray as $_tierPrice) {
+    				//$this->pr($_tierPrice);
+
+					if( is_numeric($_tierPrice['price_id']) && 
+						is_numeric($_tierPrice['percentage']) && 
+						$_tierPrice['percentage'] > 0 &&
+						is_numeric($_tierPrice['price_qty']) && 
+						$_tierPrice['price_qty'] > 0 ) {	
+
+							//update tier price table for each product
+							$value_id = $_tierPrice['price_id'];
+							$price_discount = $_tierPrice['percentage'];
+							$final_tier_price = $total_price - $price_discount;
+							$data = array("value" => $final_tier_price);
+							$where = "value_id = {$value_id}";
+							$write->update("catalog_product_entity_tier_price", $data, $where);
+							$j++;
+					} 
+    			}
+    		}
+    		$i++;
+    	}
+
+		//reindex price only
+		if($reindexPrice){
+			$process = Mage::getModel('index/indexer')->getProcessByCode('catalog_product_price');
+			$process->reindexAll();
+		}
+
+		if ($_debugLog) {
+			//calculate time
+    		$time_end = microtime(true);
+			$execution_time = ($time_end - $time_start); 
+
+			$this->log('Execution Time:'.$execution_time.' Sec. for '.$i.' products, '.$j.'tier price.');
+		}
+		
     }
+
 }
